@@ -49,7 +49,7 @@ contract Pausable is Ownable {
     }
 }
 
-contract TRC20Token is Pausable {
+contract OCToken is Pausable {
     string public constant name = "OC";
     string public constant symbol = "OC";
     uint8 public constant decimals = 6;
@@ -73,8 +73,8 @@ contract TRC20Token is Pausable {
     }
 
     function transfer(address recipient, uint256 amount) public whenNotPaused returns (bool) {
-        require(recipient != address(0), "TRC20: transfer to the zero address");
-        require(balances[msg.sender] >= amount, "TRC20: insufficient balance");
+        require(recipient != address(0), "OCToken: transfer to the zero address");
+        require(balances[msg.sender] >= amount, "OCToken: insufficient balance");
 
         balances[msg.sender] -= amount;
         balances[recipient] += amount;
@@ -89,9 +89,9 @@ contract TRC20Token is Pausable {
     }
 
     function transferFrom(address sender, address recipient, uint256 amount) public whenNotPaused returns (bool) {
-        require(recipient != address(0), "TRC20: transfer to the zero address");
-        require(balances[sender] >= amount, "TRC20: insufficient balance");
-        require(allowances[sender][msg.sender] >= amount, "TRC20: transfer amount exceeds allowance");
+        require(recipient != address(0), "OCToken: transfer to the zero address");
+        require(balances[sender] >= amount, "OCToken: insufficient balance");
+        require(allowances[sender][msg.sender] >= amount, "OCToken: transfer amount exceeds allowance");
 
         balances[sender] -= amount;
         balances[recipient] += amount;
@@ -111,14 +111,14 @@ contract TRC20Token is Pausable {
     }
 
     function decreaseAllowance(address spender, uint256 subtractedValue) public whenNotPaused returns (bool) {
-        require(allowances[msg.sender][spender] >= subtractedValue, "TRC20: decreased allowance below zero");
+        require(allowances[msg.sender][spender] >= subtractedValue, "OCToken: decreased allowance below zero");
         allowances[msg.sender][spender] -= subtractedValue;
         emit Approval(msg.sender, spender, allowances[msg.sender][spender]);
         return true;
     }
 
     function burn(uint256 amount) public whenNotPaused {
-        require(balances[msg.sender] >= amount, "TRC20: burn amount exceeds balance");
+        require(balances[msg.sender] >= amount, "OCToken: burn amount exceeds balance");
         
         balances[msg.sender] -= amount;
         totalSupply -= amount;

@@ -3,11 +3,13 @@ pragma solidity ^0.8.20;
 
 import './OCToken.sol';
 
+
 contract OMToken is Ownable, Pausable {
     string public constant name = "OM Token";
     string public constant symbol = "OM";
     uint8 public constant decimals = 6;
     uint256 public totalSupply;
+    event Burn(address indexed burner, uint256 value);
 
     mapping(address => uint256) private balances;
     mapping(address => mapping(address => uint256)) private allowances;
@@ -68,5 +70,15 @@ contract OMToken is Ownable, Pausable {
         allowances[msg.sender][spender] -= subtractedValue;
         emit Approval(msg.sender, spender, allowances[msg.sender][spender]);
         return true;
+    }
+
+    function burn(uint256 amount) public whenNotPaused {
+        require(balances[msg.sender] >= amount, "OMToken: burn amount exceeds balance");
+
+        balances[msg.sender] -= amount;
+        totalSupply -= amount;
+
+        emit Burn(msg.sender, amount);
+        emit Transfer(msg.sender, address(0), amount);
     }
 }

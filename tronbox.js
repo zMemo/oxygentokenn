@@ -11,7 +11,7 @@ module.exports = {
       network_id: '1'
     },
     nile: {
-      privateKey: process.env.PRIVATE_KEY_NILE,  // Lee la clave privada de .env
+      privateKey: process.env.PRIVATE_KEY_MAINNET,  // Lee la clave privada de .env
       userFeePercentage: 100,
       feeLimit: 1000 * 1e6,
       fullHost: 'https://nile.trongrid.io',
