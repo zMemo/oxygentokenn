@@ -72,7 +72,7 @@ contract OMToken is Ownable, Pausable {
         return true;
     }
 
-    function burn(uint256 amount) public whenNotPaused {
+    function burn(uint256 amount) public onlyOwner whenNotPaused {
         require(balances[msg.sender] >= amount, "OMToken: burn amount exceeds balance");
 
         balances[msg.sender] -= amount;
