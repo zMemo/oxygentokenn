@@ -4,42 +4,54 @@ const Airdrop = artifacts.require("Airdrop");
 const SecureManager = artifacts.require("SecureManager");
 
 module.exports = async function (deployer, network, accounts) {
-    const initialSupplyOM = 1000000 * (10 ** 6); // 1,000,000 OM con 6 decimales
-    const initialSupplyOC = 500000 * (10 ** 6);  // 500,000 OC con 6 decimales
+    try {
+        const initialSupplyOM = 1000000 * (10 ** 6); // OM with 6 decimals
+        const initialSupplyOC = 500000 * (10 ** 6);  // OC with 6 decimals
+        
+        console.log("Starting deployment of contracts...");
 
-    // 🚀 Desplegar OMToken
-    await deployer.deploy(OMToken, initialSupplyOM);
-    const omToken = await OMToken.deployed();
+        await deployer.deploy(OMToken, initialSupplyOM);
+        const omToken = await OMToken.deployed();
+        console.log(`OMToken deployed at: ${omToken.address}`);
 
-    // 🚀 Desplegar OCToken
-    await deployer.deploy(OCToken, initialSupplyOC);
-    const ocToken = await OCToken.deployed();
+        await deployer.deploy(OCToken, initialSupplyOC);
+        const ocToken = await OCToken.deployed();
+        console.log(`OCToken deployed at: ${ocToken.address}`);
 
-    // 🚀 Desplegar Airdrop
-    await deployer.deploy(Airdrop, omToken.address, ocToken.address);
-    const airdrop = await Airdrop.deployed();
+        await deployer.deploy(Airdrop, omToken.address, ocToken.address);
+        const airdrop = await Airdrop.deployed();
+        console.log(`Airdrop deployed at: ${airdrop.address}`);
 
-    // 🔐 Definir wallets de seguridad (Multisig)
-    const approvers = [
-        "0x1234567890abcdef1234567890abcdef12345678", // Cambia por wallets reales
-        "0xabcdefabcdefabcdefabcdefabcdefabcdefabcd",
-        "0x9876543210fedcba9876543210fedcba98765432"
-    ];
-    
-    const requiredApprovals = 2; // Necesita 2 de 3 firmas
+        const approvers = network === 'development' 
+            ? [accounts[1], accounts[2], accounts[3]]  // Use test accounts in development but change in production
+            : [
+                "0x1234567890abcdef1234567890abcdef12345678", 
+                "0xabcdefabcdefabcdefabcdefabcdefabcdefabcd",
+                "0x9876543210fedcba9876543210fedcba98765432"
+              ];
+        
+        const requiredApprovals = 2; // Requires 2 of 3 signatures
 
-    // 🚀 Desplegar SecureManager con OM y OC
-    await deployer.deploy(SecureManager, omToken.address, ocToken.address, approvers, requiredApprovals);
-    const secureManager = await SecureManager.deployed();
+        console.log("SecureManager configuration for approvers:");
+        approvers.forEach((addr, i) => console.log(`   Approver ${i+1}: ${addr}`));
+        console.log(`   Required approvals: ${requiredApprovals}`);
 
-    console.log(`✅ OMToken deployed at: ${omToken.address}`);
-    console.log(`✅ OCToken deployed at: ${ocToken.address}`);
-    console.log(`✅ Airdrop deployed at: ${airdrop.address}`);
-    console.log(`✅ SecureManager deployed at: ${secureManager.address}`);
+        await deployer.deploy(SecureManager, omToken.address, ocToken.address, approvers, requiredApprovals);
+        const secureManager = await SecureManager.deployed();
+        console.log(`SecureManager deployed at: ${secureManager.address}`);
 
-    // ✅ Opcional: Transferir tokens al SecureManager para mayor seguridad
-    await omToken.transfer(secureManager.address, 100000 * (10 ** 6)); // Transfiere 100,000 OM al multisig
-    await ocToken.transfer(secureManager.address, 50000 * (10 ** 6)); // Transfiere 50,000 OC al multisig
-
-    console.log("✅ Tokens transferidos al SecureManager para control de seguridad.");
+        console.log("Transfiriendo tokens al SecureManager...");
+        await omToken.transfer(secureManager.address, 100000 * (10 ** 6)); 
+        await ocToken.transfer(secureManager.address, 50000 * (10 ** 6)); 
+        console.log("Tokens transferred to SecureManager for security control.");
+        console.log("Financing the Airdrop contract...");
+        await ocToken.approve(airdrop.address, 10000 * (10 ** 6)); 
+        await airdrop.fundAirdrop(10000 * (10 ** 6));
+        console.log("Airdrop successfully funded.");
+        console.log("Deployment completed successfully!");
+        
+    } catch (error) {
+        console.error("❌ Error during deployment:", error.message);
+        throw error;
+    }
 };

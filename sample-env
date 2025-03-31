@@ -1,1 +1,7 @@
-export PRIVATE_KEY_SHASTA=0000000000000000000000000000000000000000000000000000000000000001
+
+export PRIVATE_KEY_MAINNET=your_production_private_key_here
+export PRIVATE_KEY_NILE=your_nile_testnet_private_key_here
+export PRIVATE_KEY_SHASTA=your_shasta_testnet_private_key_here
+
+# Local node port (optional)
+export HOST_PORT=9090

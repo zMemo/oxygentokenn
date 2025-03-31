@@ -3,7 +3,7 @@ const OCToken = artifacts.require("OCToken");
 const Airdrop = artifacts.require("Airdrop");
 const SecureManager = artifacts.require("SecureManager");
 
-contract("Sistema Completo: OM, OC, Airdrop & SecureManager", (accounts) => {
+contract("Complete system: OM, OC, Airdrop & SecureManager", (accounts) => {
     let omToken, ocToken, airdrop, secureManager;
     const owner = accounts[0];  
     const approver1 = accounts[1];  
@@ -13,14 +13,14 @@ contract("Sistema Completo: OM, OC, Airdrop & SecureManager", (accounts) => {
     const user2 = accounts[5];  
 
     before(async () => {
-        // 🚀 Desplegar los tokens
+        // 🚀 Deploy the tokens
         omToken = await OMToken.new(1000000 * (10 ** 6));
         ocToken = await OCToken.new(500000 * (10 ** 6));
 
-        // 🚀 Desplegar el Airdrop
+        // 🚀 Deploy the Airdrop
         airdrop = await Airdrop.new(omToken.address, ocToken.address);
 
-        // 🚀 Desplegar SecureManager con 2 approvers y 2 firmas requeridas
+        // 🚀 Deploy the SecureManager with 2 approvers and 2 required signatures
         secureManager = await SecureManager.new(
             omToken.address, 
             ocToken.address, 
@@ -29,69 +29,173 @@ contract("Sistema Completo: OM, OC, Airdrop & SecureManager", (accounts) => {
         );
     });
 
-    it("✅ Verifica que los tokens OM y OC tengan el suministro inicial correcto", async () => {
+    it("✅ Verifies that the OM and OC tokens have the correct initial supply", async () => {
         const totalSupplyOM = await omToken.totalSupply();
         const totalSupplyOC = await ocToken.totalSupply();
         assert.equal(totalSupplyOM.toString(), (1000000 * (10 ** 6)).toString(), "OM supply incorrecto");
         assert.equal(totalSupplyOC.toString(), (500000 * (10 ** 6)).toString(), "OC supply incorrecto");
     });
 
-    it("✅ OMToken permite transferencias correctamente", async () => {
+    it("✅ OMToken allows correct transfers", async () => {
         await omToken.transfer(user1, 1000 * (10 ** 6), { from: owner });
         const balance = await omToken.balanceOf(user1);
-        assert.equal(balance.toString(), (1000 * (10 ** 6)).toString(), "Transferencia incorrecta");
+        assert.equal(balance.toString(), (1000 * (10 ** 6)).toString(), "Incorrect transfer");
     });
 
-    it("✅ Airdrop solo permite reclamar a usuarios con 100 OM o más", async () => {
+    it("✅ Airdrop only allows claiming by users with 100 OM or more", async () => {
         await ocToken.transfer(airdrop.address, 10000 * (10 ** 6), { from: owner });
         await omToken.transfer(user1, 100 * (10 ** 6), { from: owner });
 
         await airdrop.claimAirdrop({ from: user1 });
         const balanceOC = await ocToken.balanceOf(user1);
-        assert.equal(balanceOC.toString(), (10 * (10 ** 6)).toString(), "Airdrop incorrecto");
+        assert.equal(balanceOC.toString(), (10 * (10 ** 6)).toString(), "Incorrect airdrop");
     });
 
-    it("❌ Un usuario sin 100 OM no puede reclamar el Airdrop", async () => {
+    it("❌ A user without 100 OM cannot claim the Airdrop", async () => {
         try {
             await airdrop.claimAirdrop({ from: user2 }); 
-            assert.fail("El usuario sin 100 OM no debería poder reclamar");
+            assert.fail("The user without 100 OM should not be able to claim");
         } catch (error) {
-            assert(error.toString().includes("No tienes suficientes OM"), "No mostró el error esperado");
+            assert(error.toString().includes("No tienes suficientes OM"), "No showed the expected error");
         }
     });
 
-    it("✅ SecureManager solo permite agregar approvers desde el owner", async () => {
+    it("✅ SecureManager only allows adding approvers from the owner", async () => {
         await secureManager.addApprover(accounts[6], { from: owner });
         const isApprover = await secureManager.approvers(accounts[6]);
-        assert.equal(isApprover, true, "No se pudo agregar un nuevo approver");
+        assert.equal(isApprover, true, "Could not add a new approver");
     });
 
-    it("✅ SecureManager requiere firmas múltiples para ejecutar retiros", async () => {
+    it("✅ SecureManager requires multiple signatures to execute withdrawals", async () => {
+        // Transfer tokens to the SecureManager contract
         await omToken.transfer(secureManager.address, 10000 * (10 ** 6), { from: owner });
         await ocToken.transfer(secureManager.address, 5000 * (10 ** 6), { from: owner });
 
-        // 🚀 1er approver firma
+        // 🚀 Request a withdrawal (new step in the updated contract)
+        await secureManager.requestWithdrawal(
+            user1,                    // recipient
+            1000 * (10 ** 6),         // OM amount
+            500 * (10 ** 6),          // OC amount
+            { from: owner }
+        );
+
+        // 🚀 1st approver signature
         await secureManager.approveWithdrawal({ from: approver1 });
 
-        // 🚀 2do approver firma
+        // 🚀 2nd approver signature
         await secureManager.approveWithdrawal({ from: approver2 });
 
-        // 🚀 El owner ejecuta el retiro
-        await secureManager.executeWithdrawal(user1, 1000 * (10 ** 6), 500 * (10 ** 6), { from: owner });
+        // 🚀 The owner executes the withdrawal (no parameters needed in updated contract)
+        await secureManager.executeWithdrawal({ from: owner });
 
+        // Check the final balances
         const balanceOMUser = await omToken.balanceOf(user1);
         const balanceOCUser = await ocToken.balanceOf(user1);
 
-        assert.equal(balanceOMUser.toString(), (1100 * (10 ** 6)).toString(), "OM no se transfirió correctamente");
-        assert.equal(balanceOCUser.toString(), (510 * (10 ** 6)).toString(), "OC no se transfirió correctamente");
+        assert.equal(balanceOMUser.toString(), (1100 * (10 ** 6)).toString(), "OM was not transferred correctly");
+        assert.equal(balanceOCUser.toString(), (510 * (10 ** 6)).toString(), "OC was not transferred correctly");
     });
 
-    it("❌ No se puede ejecutar un retiro sin las firmas requeridas", async () => {
+    it("❌ Cannot execute a withdrawal without the required signatures", async () => {
+        // Request a new withdrawal
+        await secureManager.requestWithdrawal(
+            user2,                    // recipient
+            500 * (10 ** 6),          // OM amount
+            200 * (10 ** 6),          // OC amount
+            { from: owner }
+        );
+
+        // No approvals are made
+
         try {
-            await secureManager.executeWithdrawal(user2, 500 * (10 ** 6), 200 * (10 ** 6), { from: owner });
-            assert.fail("No debería ejecutarse el retiro sin firmas suficientes");
+            await secureManager.executeWithdrawal({ from: owner });
+            assert.fail("The withdrawal should not be executed without enough signatures");
         } catch (error) {
-            assert(error.toString().includes("Not enough approvals"), "No mostró el error esperado");
+            assert(error.toString().includes("Not enough approvals"), "Did not show the expected error");
         }
+    });
+
+    it("✅ Approver can cancel their approval", async () => {
+        // Request a new withdrawal
+        await secureManager.requestWithdrawal(
+            user2,                    // recipient
+            500 * (10 ** 6),          // OM amount
+            200 * (10 ** 6),          // OC amount
+            { from: owner }
+        );
+        
+        // First approver approves
+        await secureManager.approveWithdrawal({ from: approver1 });
+        
+        // Check that the approval count is 1
+        let approvalCount = await secureManager.approvalCount();
+        assert.equal(approvalCount.toNumber(), 1, "Approval count should be 1");
+        
+        // Now the first approver changes their mind and cancels
+        await secureManager.cancelApproval({ from: approver1 });
+        
+        // Check that the approval count is back to 0
+        approvalCount = await secureManager.approvalCount();
+        assert.equal(approvalCount.toNumber(), 0, "Approval count should be 0 after cancellation");
+        
+        // Attempt to execute should fail
+        try {
+            await secureManager.executeWithdrawal({ from: owner });
+            assert.fail("The withdrawal should not be executed after approval cancellation");
+        } catch (error) {
+            assert(error.toString().includes("Not enough approvals"), "Did not show the expected error");
+        }
+    });
+
+    it("✅ Owner can cancel a withdrawal request", async () => {
+        // Request a new withdrawal
+        await secureManager.requestWithdrawal(
+            user2,                    // recipient
+            500 * (10 ** 6),          // OM amount
+            200 * (10 ** 6),          // OC amount
+            { from: owner }
+        );
+        
+        // Verify the withdrawal is requested
+        let withdrawalRequested = await secureManager.withdrawalRequested();
+        assert.equal(withdrawalRequested, true, "Withdrawal should be requested");
+        
+        // Owner cancels the withdrawal
+        await secureManager.cancelWithdrawal({ from: owner });
+        
+        // Verify withdrawal is no longer requested
+        withdrawalRequested = await secureManager.withdrawalRequested();
+        assert.equal(withdrawalRequested, false, "Withdrawal should be cancelled");
+        
+        // Attempt to approve should fail
+        try {
+            await secureManager.approveWithdrawal({ from: approver1 });
+            assert.fail("Approval should not be possible after withdrawal cancellation");
+        } catch (error) {
+            assert(error.toString().includes("No withdrawal request in progress"), "Did not show the expected error");
+        }
+    });
+
+    it("✅ Approver list management functions correctly", async () => {
+        // Add a new approver
+        await secureManager.addApprover(accounts[7], { from: owner });
+        
+        // Check approver was added
+        let isApprover = await secureManager.approvers(accounts[7]);
+        assert.equal(isApprover, true, "New approver should be added");
+        
+        // Get the total number of approvers
+        let approversCount = await secureManager.getApproversCount();
+        
+        // Remove an approver
+        await secureManager.removeApprover(accounts[7], { from: owner });
+        
+        // Check approver was removed
+        isApprover = await secureManager.approvers(accounts[7]);
+        assert.equal(isApprover, false, "Approver should be removed");
+        
+        // Verify count decreased
+        let newApproversCount = await secureManager.getApproversCount();
+        assert.equal(newApproversCount.toNumber(), approversCount.toNumber() - 1, "Approvers count should decrease");
     });
 });

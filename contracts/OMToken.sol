@@ -1,83 +1,177 @@
-// SPDX-License-Identifier: UNLICENSED
+// SPDX-License-Identifier: MIT
 pragma solidity ^0.8.20;
 
 import './OCToken.sol';
 
-
+/**
+ * @title OMToken
+ * @dev Implementación del token OM con mecanismos de seguridad mejorados
+ * y protección contra ataques comunes de smart contracts.
+ */
 contract OMToken is Ownable, Pausable {
     string public constant name = "OM Token";
     string public constant symbol = "OM";
     uint8 public constant decimals = 6;
     uint256 public totalSupply;
-    event Burn(address indexed burner, uint256 value);
 
+    // Balances and assignments
     mapping(address => uint256) private balances;
     mapping(address => mapping(address => uint256)) private allowances;
-
+    
+    // Eventos
     event Transfer(address indexed from, address indexed to, uint256 value);
     event Approval(address indexed owner, address indexed spender, uint256 value);
+    event Burn(address indexed burner, uint256 value);
 
+    /**
+     * @dev Constructor del token
+     * @param initialSupply Cantidad inicial de tokens a crear
+     */
     constructor(uint256 initialSupply) {
         totalSupply = initialSupply * 10 ** uint256(decimals);
         balances[msg.sender] = totalSupply;
         emit Transfer(address(0), msg.sender, totalSupply);
     }
 
+    /**
+     * @dev Devuelve el saldo de tokens de una cuenta
+     * @param account Dirección de la cuenta a consultar
+     */
     function balanceOf(address account) public view returns (uint256) {
         return balances[account];
     }
 
+    /**
+     * @dev Transfiere tokens a otra cuenta
+     * Implementa verificaciones de seguridad y sigue el patrón checks-effects-interactions
+     * @param recipient Dirección del destinatario
+     * @param amount Cantidad de tokens a transferir
+     * @return Éxito de la operación
+     */
     function transfer(address recipient, uint256 amount) public whenNotPaused returns (bool) {
+        // Checks
         require(recipient != address(0), "OMToken: transfer to the zero address");
         require(balances[msg.sender] >= amount, "OMToken: insufficient balance");
 
-        balances[msg.sender] -= amount;
-        balances[recipient] += amount;
+        // Effects
+        unchecked {
+            balances[msg.sender] -= amount;
+            balances[recipient] += amount;
+        }
+        
+        // Event (not an interaction but follows the pattern)
         emit Transfer(msg.sender, recipient, amount);
+        
         return true;
     }
 
+    /**
+     * @dev Quantity that a spender can spend from the owner's account
+     * Implements the zero-first approach security mechanism to prevent front-running attacks
+     * @param spender Address of the spender
+     * @param amount Amount of tokens to approve
+     * @return Success of the operation
+     */
     function approve(address spender, uint256 amount) public whenNotPaused returns (bool) {
+        require(spender != address(0), "OMToken: approve to the zero address");
+        
+        // Zero-first approach para mitigar ataques de front-running
+        if (amount > 0 && allowances[msg.sender][spender] > 0) {
+            require(allowances[msg.sender][spender] == 0, "OMToken: reset allowance to 0 first");
+        }
+        
         allowances[msg.sender][spender] = amount;
         emit Approval(msg.sender, spender, amount);
         return true;
     }
 
+    /**
+     * @dev Transfers tokens from one account to another using the allowance mechanism
+     * @param sender Address of the sender
+     * @param recipient Address of the recipient
+     * @param amount Amount of tokens to transfer
+     * @return Success of the operation
+     */
     function transferFrom(address sender, address recipient, uint256 amount) public whenNotPaused returns (bool) {
+        // Checks
+        require(sender != address(0), "OMToken: transfer from the zero address");
         require(recipient != address(0), "OMToken: transfer to the zero address");
         require(balances[sender] >= amount, "OMToken: insufficient balance");
         require(allowances[sender][msg.sender] >= amount, "OMToken: transfer amount exceeds allowance");
 
-        balances[sender] -= amount;
-        balances[recipient] += amount;
-        allowances[sender][msg.sender] -= amount;
+        // Effects
+        unchecked {
+            balances[sender] -= amount;
+            balances[recipient] += amount;
+            allowances[sender][msg.sender] -= amount;
+        }
+        
+        // Events
         emit Transfer(sender, recipient, amount);
+        
         return true;
     }
 
+    /**
+     * @dev Devuelve la cantidad que un gastador puede gastar de la cuenta del propietario
+     * @param accountOwner Address of the owner of the account
+     * @param spender Address of the spender
+     * @return Amount approved
+     */
     function allowance(address accountOwner, address spender) public view returns (uint256) {
         return allowances[accountOwner][spender];
     }
 
+    /**
+     * @dev Aumenta la cantidad que un gastador puede gastar de la cuenta del propietario
+     * @param spender Address of the spender
+     * @param addedValue Additional value to approve
+     * @return Success of the operation
+     */
     function increaseAllowance(address spender, uint256 addedValue) public whenNotPaused returns (bool) {
-        allowances[msg.sender][spender] += addedValue;
+        require(spender != address(0), "OMToken: approve to the zero address");
+        
+        unchecked {
+            allowances[msg.sender][spender] += addedValue;
+        }
+        
         emit Approval(msg.sender, spender, allowances[msg.sender][spender]);
         return true;
     }
 
+    /**
+     * @dev Disminuye la cantidad que un gastador puede gastar de la cuenta del propietario
+     * @param spender Address of the spender
+     * @param subtractedValue Value to subtract from the approval
+     * @return Success of the operation
+     */
     function decreaseAllowance(address spender, uint256 subtractedValue) public whenNotPaused returns (bool) {
+        require(spender != address(0), "OMToken: approve to the zero address");
         require(allowances[msg.sender][spender] >= subtractedValue, "OMToken: decreased allowance below zero");
-        allowances[msg.sender][spender] -= subtractedValue;
+        
+        unchecked {
+            allowances[msg.sender][spender] -= subtractedValue;
+        }
+        
         emit Approval(msg.sender, spender, allowances[msg.sender][spender]);
         return true;
     }
 
+    /**
+     * @dev Burns tokens reducing the balance of the issuer and the total supply
+     * @param amount Amount of tokens to burn
+     */
     function burn(uint256 amount) public whenNotPaused {
+        // Checks
         require(balances[msg.sender] >= amount, "OMToken: burn amount exceeds balance");
-
-        balances[msg.sender] -= amount;
-        totalSupply -= amount;
-
+        
+        // Effects
+        unchecked {
+            balances[msg.sender] -= amount;
+            totalSupply -= amount;
+        }
+        
+        // Events
         emit Burn(msg.sender, amount);
         emit Transfer(msg.sender, address(0), amount);
     }

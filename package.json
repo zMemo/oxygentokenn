@@ -1,19 +1,26 @@
 {
   "name": "oxygen-token",
   "version": "1.0.0",
-  "description": "",
+  "description": "Ecosystem of tokens for the Oxygen project",
   "main": "tronbox-config.js",
   "directories": {
     "test": "test"
   },
   "scripts": {
-    "mythril": "myth analyze ./contracts/TRC20token.sol",
-    "slither": "slither ./contracts/TRC20token.sol",
-    "audit": "npm run mythril && npm run slither"
+    "mythril": "myth analyze ./contracts/OMToken.sol ./contracts/OCToken.sol ./contracts/SecureManager.sol ./contracts/Airdrop.sol",
+    "slither": "slither .",
+    "audit": "npm run mythril && npm run slither",
+    "compile": "tronbox compile",
+    "migrate": "tronbox migrate",
+    "test": "tronbox test"
   },
   "dependencies": {
     "tronbox": "^2.8.0"
   },
+  "devDependencies": {
+    "mythril": "^0.23.15",
+    "slither-analyzer": "^0.9.1"
+  },
   "author": "",
-  "license": "ISC"
+  "license": "MIT"
 }
