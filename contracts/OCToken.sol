@@ -136,7 +136,7 @@ contract OCToken is Pausable {
     function approve(address spender, uint256 amount) public whenNotPaused returns (bool) {
         require(spender != address(0), "OCToken: approve to the zero address");
         
-        // Zero-first approach para mitigar ataques de front-running
+        // Zero-first approach to mitigate front-running attacks
         if (amount > 0 && allowances[msg.sender][spender] > 0) {
             require(allowances[msg.sender][spender] == 0, "OCToken: reset allowance to 0 first");
         }

@@ -5,8 +5,7 @@ import './OCToken.sol';
 
 /**
  * @title OMToken
- * @dev Implementación del token OM con mecanismos de seguridad mejorados
- * y protección contra ataques comunes de smart contracts.
+ * @dev Attacks protection and common smart contract attacks.
  */
 contract OMToken is Ownable, Pausable {
     string public constant name = "OM Token";
@@ -24,8 +23,8 @@ contract OMToken is Ownable, Pausable {
     event Burn(address indexed burner, uint256 value);
 
     /**
-     * @dev Constructor del token
-     * @param initialSupply Cantidad inicial de tokens a crear
+     * @dev Constructor
+     * @param initialSupply Initial amount of tokens to create
      */
     constructor(uint256 initialSupply) {
         totalSupply = initialSupply * 10 ** uint256(decimals);
@@ -34,19 +33,19 @@ contract OMToken is Ownable, Pausable {
     }
 
     /**
-     * @dev Devuelve el saldo de tokens de una cuenta
-     * @param account Dirección de la cuenta a consultar
+     * @dev Returns the token balance of an account
+     * @param account Address of the account to query
      */
     function balanceOf(address account) public view returns (uint256) {
         return balances[account];
     }
 
     /**
-     * @dev Transfiere tokens a otra cuenta
-     * Implementa verificaciones de seguridad y sigue el patrón checks-effects-interactions
-     * @param recipient Dirección del destinatario
-     * @param amount Cantidad de tokens a transferir
-     * @return Éxito de la operación
+     * @dev Transfers tokens to another account
+     * Implements security checks and follows the checks-effects-interactions pattern
+     * @param recipient Address of the recipient
+     * @param amount Amount of tokens to transfer
+     * @return Success of the operation
      */
     function transfer(address recipient, uint256 amount) public whenNotPaused returns (bool) {
         // Checks
@@ -113,7 +112,7 @@ contract OMToken is Ownable, Pausable {
     }
 
     /**
-     * @dev Devuelve la cantidad que un gastador puede gastar de la cuenta del propietario
+     * @dev Returns the amount that a spender can spend from the owner's account
      * @param accountOwner Address of the owner of the account
      * @param spender Address of the spender
      * @return Amount approved
@@ -123,7 +122,7 @@ contract OMToken is Ownable, Pausable {
     }
 
     /**
-     * @dev Aumenta la cantidad que un gastador puede gastar de la cuenta del propietario
+     * @dev Increases the amount that a spender can spend from the owner's account
      * @param spender Address of the spender
      * @param addedValue Additional value to approve
      * @return Success of the operation
@@ -140,7 +139,7 @@ contract OMToken is Ownable, Pausable {
     }
 
     /**
-     * @dev Disminuye la cantidad que un gastador puede gastar de la cuenta del propietario
+     * @dev Decreases the amount that a spender can spend from the owner's account
      * @param spender Address of the spender
      * @param subtractedValue Value to subtract from the approval
      * @return Success of the operation
